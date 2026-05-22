@@ -1,0 +1,25 @@
+{
+  "name": "node-express-pizzeria",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file=.env server.js",
+    "watch": "node --watch --env-file=.env server.js"
+  },
+  "keywords": [],
+  "author": "Alan Turing",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.1.3",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "dependencies": {
+    "express": "^5.2.1",
+    "nodemailer": "^8.0.7"
+  }
+}
