@@ -3,10 +3,10 @@ import { index, show, create, destroy } from '../controllers/pizzas.js';
 
 const router = express.Router();
 
-// INDEX (http://localhost:3000/pizzas)
+// INDEX
 router.get('/', index);
 
-// SHOW (http://localhost:3000/pizzas/1)
+// SHOW
 router.get('/:id', show);
 
 // CREATE

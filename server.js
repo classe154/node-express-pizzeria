@@ -7,29 +7,15 @@ const port = process.env.SERVER_PORT || 3000;
 
 app.use(express.static('public'));
 //app.use(express.urlencoded()); // Utile per le richieste application/x-www-form-urlencoded
-//app.use(express.json()); // Utile per le richieste application/json
+app.use(express.json()); // Utile per le richieste application/json
 
 app.use('/pizzas' , pizzasRouter);
 
-app.get('/send-mail', (request, response) => {
-    sendMail(
-        'acker.federico@gmail.com',
-        'Hi from nodeJS',
-        'Ciao'
-    ).then(mailInfo => {
-        console.log(mailInfo);
-        response.json({
-            messaggio: 'mail inviata correttamente'
-        })
-    });
-});
 
 app.listen(port, (error) => {
-    
     if (error) {
         console.error(error);
         return;
     }
-
     console.log(`Server started at port ${port}`);
 });
