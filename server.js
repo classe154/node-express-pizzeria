@@ -5,6 +5,10 @@ import { sendMail } from './utils/mailSender.js';
 const app = express();
 const port = process.env.SERVER_PORT || 3000;
 
+app.use(express.static('public'));
+//app.use(express.urlencoded()); // Utile per le richieste application/x-www-form-urlencoded
+//app.use(express.json()); // Utile per le richieste application/json
+
 app.use('/pizzas' , pizzasRouter);
 
 app.get('/send-mail', (request, response) => {
