@@ -1,4 +1,4 @@
-import menu from '../data/menu.js';
+import menu, { generateNextId, generateSlug, menuOrderFields } from '../data/menu.js';
 
 function index(request, response) {
     // Casi da testare:
@@ -7,10 +7,12 @@ function index(request, response) {
     // GET http://localhost:3000/pizzas?ingredients=mozza                 → 200 (solo pizze con la stringa mozza tra gli ingredienti)
     // GET http://localhost:3000/pizzas?priceMax=12&ingredients=pomodoro  → 200 (filtri combinati)
     // GET http://localhost:3000/pizzas?priceMax=ciao                     → 200 (priceMax non valido: filtro ignorato)
+    // GET http://localhost:3000/pizzas?orderBy=price
 
     const {
         ingredients,
-        priceMax
+        priceMax,
+        orderBy,
     } = request.query;
 
     // I parametri di query arrivano sempre come stringhe: parseFloat li converte in numero.
@@ -19,6 +21,10 @@ function index(request, response) {
     const priceMaxReal = parseFloat(priceMax);
 
     const menuFiltered = menu.filter(pizza => {
+
+        if (pizza.available === false) {
+            return false;
+        }
 
         if (!isNaN(priceMaxReal)) {
             if (pizza.price > priceMaxReal) {
@@ -37,12 +43,55 @@ function index(request, response) {
         }
 
         return true;
-
     });
+
+    if (menuOrderFields.includes(orderBy)) { // Mi hai passato una chiave corretta di ordinamento
+        console.log('Ordino');
+
+        menuFiltered.sort((pizzaA, pizzaB) => {
+            const pizzaAValue = pizzaA[orderBy]; // Se fosse price => pizzaA.price
+            const pizzaBValue = pizzaB[orderBy]; // Se fosse price => pizzaB.price
+
+            if (typeof pizzaAValue === 'string') {
+                return pizzaBValue.localeCompare(pizzaAValue);
+            } else if (typeof pizzaAValue === 'number') {
+                return pizzaBValue - pizzaAValue; // pizzaAValue = 15, pizzaBValue = 9
+            }
+        });
+    }
 
     response.json(menuFiltered);
 }
 
+function showBySlug(request, response) {
+    const { slug } = request.params;
+
+    const realSlug = slug.trim();
+
+    const pizzaFound = menu.find(pizza => {
+        return pizza.slug === realSlug;
+    });
+
+    if (pizzaFound === undefined || pizzaFound.available === false) {
+        response.status(404)
+            .json({
+                error: 'Pizza non trovata',
+                results: null
+            });
+        return;
+    }
+
+    const { id, available, createdAt, ...otherProperties } = pizzaFound;
+
+    response.json({
+        error: null,
+        results: {
+            ...otherProperties,
+            image: 'http://localhost:3000/' + otherProperties.image
+        }
+    });
+
+}
 
 function show(request, response) {
     // Casi da testare:
@@ -84,7 +133,6 @@ function show(request, response) {
         error: null,
         results: pizzaFound
     });
-
 }
 
 // TODO: la logica di inserimento verrà completata nella prossima lezione.
@@ -101,7 +149,12 @@ function create(request, response) {
     // Express non parserà il body e request.body sarà undefined.
     // Destrutturare undefined causa un errore runtime: || {} lo previene,
     // restituendo un oggetto vuoto da cui name e price risulteranno undefined.
-    const { name, price } = request.body || {};
+
+    let body = request.body;
+    if (body === undefined) {
+        body = {};
+    }
+    const { name, price, ingredients, spicy = false } = body;
 
     if (!name || name.trim() === '') {
         response.status(400).json({
@@ -111,21 +164,57 @@ function create(request, response) {
         return;
     }
 
-    // parseFloat protegge anche nel caso in cui il client invii price come stringa ("11.50").
-    const priceReal = parseFloat(price);
-
-    if (isNaN(priceReal) || priceReal < 0) {
+    if (typeof price !== 'number' || price < 0) {
         response.status(400).json({
-            error: 'Il campo "price" deve essere un numero positivo',
+            error: 'Il campo "price" deve essere un numero e positivo',
             results: null
         });
         return;
     }
 
-    response.json({
-        messaggio: 'Richiesta di creazione',
-        dati: { name, price }
-    });
+    if (!Array.isArray(ingredients) ||
+        ingredients.length === 0 ||
+        ingredients.some(ingredient => {
+            return typeof ingredient !== 'string';
+        }) === true
+    ) {
+        response.status(400).json({
+            error: 'Il campo "ingredients" deve essere un array di stringhe, non vuoto',
+            results: null
+        });
+        return;
+    }
+
+    if (typeof spicy !== 'boolean') {
+        response.status(400).json({
+            error: 'Il campo "spicy" deve essere un booleano',
+            results: null
+        });
+        return;
+    }
+
+    const pizzaNew = {
+        id: generateNextId(),
+        slug: null,
+        name,
+        image: null,
+        ingredients,
+        available: true,
+        price,
+        spicy
+    };
+
+    const pizzaNewSlug = generateSlug(pizzaNew);
+    pizzaNew.slug = pizzaNewSlug;
+
+    menu.push(pizzaNew);
+
+    response
+        .status(201)
+        .json({
+            messaggio: 'Creazione avvenuta',
+            dati: pizzaNew
+        });
 }
 
 function destroy(request, response) {
@@ -153,7 +242,7 @@ function destroy(request, response) {
         return pizza.id === idReal;
     });
 
-    if (pizzaFoundIndex === -1) {
+    if (pizzaFoundIndex === -1 || menu[pizzaFoundIndex].available === false) {
         response
             .status(404)
             .json({
@@ -163,13 +252,113 @@ function destroy(request, response) {
         return;
     }
 
-    menu.splice(pizzaFoundIndex, 1);
+    menu[pizzaFoundIndex].available = false;
+
+    // menu.splice(pizzaFoundIndex, 1);
     response.sendStatus(204);
+}
+
+function update(request, response) {
+    const { id } = request.params;
+
+    const idReal = Number(id);
+
+    if (isNaN(idReal) || idReal <= 0) {
+        response
+            .status(400)
+            .json({
+                error: "Parametro id non corretto",
+                results: null
+            });
+        return;
+    }
+
+    // findIndex invece di find: ci serve la posizione nell'array per poter usare splice().
+    const pizzaFoundIndex = menu.findIndex(pizza => {
+        return pizza.id === idReal;
+    });
+
+    if (pizzaFoundIndex === -1 || menu[pizzaFoundIndex].available === false) {
+        response
+            .status(404)
+            .json({
+                error: "Nessuna pizza trovata",
+                results: null
+            });
+        return;
+    }
+
+    let body = request.body;
+    if (body === undefined) {
+        body = {};
+    }
+    const { name, price, ingredients, spicy = false } = body;
+
+    if (!name || name.trim() === '') {
+        response.status(400).json({
+            error: 'Il campo "name" è obbligatorio',
+            results: null
+        });
+        return;
+    }
+
+    if (typeof price !== 'number' || price < 0) {
+        response.status(400).json({
+            error: 'Il campo "price" deve essere un numero e positivo',
+            results: null
+        });
+        return;
+    }
+
+    if (!Array.isArray(ingredients) ||
+        ingredients.length === 0 ||
+        ingredients.some(ingredient => {
+            return typeof ingredient !== 'string';
+        }) === true
+    ) {
+        response.status(400).json({
+            error: 'Il campo "ingredients" deve essere un array di stringhe, non vuoto',
+            results: null
+        });
+        return;
+    }
+
+    if (typeof spicy !== 'boolean') {
+        response.status(400).json({
+            error: 'Il campo "spicy" deve essere un booleano',
+            results: null
+        });
+        return;
+    }
+
+    const pizzaOld = menu[pizzaFoundIndex];
+    const pizzaUpdated = {
+        ...pizzaOld,
+        name,
+        ingredients,
+        price,
+        spicy
+    };
+
+    if (name !== pizzaOld.name) {
+        pizzaUpdated.slug = generateSlug(pizzaUpdated);
+    }
+
+    menu.splice(pizzaFoundIndex, 1, pizzaUpdated);
+
+    response
+        .status(200)
+        .json({
+            messaggio: 'Modifica avvenuta',
+            dati: pizzaUpdated
+        });
 }
 
 export {
     index,
     show,
+    showBySlug,
     create,
+    update,
     destroy
 };

@@ -11,6 +11,10 @@ app.use(express.json()); // Utile per le richieste application/json
 
 app.use('/pizzas' , pizzasRouter);
 
+// http://localhost:3000/login?username=Samuel&password=12345
+app.get('/my-redirect', (request, response) => {
+    response.redirect(301, "/pizzas-fake");
+});
 
 app.listen(port, (error) => {
     if (error) {
