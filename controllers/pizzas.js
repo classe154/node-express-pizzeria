@@ -36,7 +36,7 @@ function index(request, response) {
     response.json({ error: null, results: menuFiltered });
 }
 
-function showBySlug(request, response) {
+function show(request, response) {
     // Casi da testare:
     // GET http://localhost:3000/pizzas/diavola      → 200 (pizza trovata)
     // GET http://localhost:3000/pizzas/bufalina     → 404 (pizza non disponibile)
@@ -151,4 +151,4 @@ function update(request, response) {
     response.status(200).json({ error: null, results: pizzaUpdated });
 }
 
-export { index, showBySlug, create, update, destroy };
+export { index, show, create, update, destroy };
