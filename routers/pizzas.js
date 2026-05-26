@@ -1,15 +1,10 @@
 import express from 'express';
-import { index, show, showBySlug, create, update, destroy } from '../controllers/pizzas.js';
+import { index, showBySlug, create, update, destroy } from '../controllers/pizzas.js';
 
 const router = express.Router();
 
 // INDEX
 router.get('/', index);
-
-// SHOW by ID
-// http://localhost:3000/pizzas/3
-// http://localhost:3000/pizzas/19
-//router.get('/:id*', show);
 
 // SHOW by slug
 // http://localhost:3000/pizzas/4-formaggi
@@ -20,9 +15,9 @@ router.get('/:slug', showBySlug);
 router.post('/', create);
 
 // UPDATE
-router.put('/:id', update);
+router.put('/:slug', update);
 
 // DELETE
-router.delete('/:id', destroy);
+router.delete('/:slug', destroy);
 
 export default router;
