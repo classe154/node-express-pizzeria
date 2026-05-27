@@ -32,6 +32,7 @@ Quando costruiamo un'API non basta che il codice funzioni: bisogna anche restitu
 | `204` | No Content | L'operazione è andata bene, ma non restituiamo contenuto nel body |
 | `301` | Moved Permanently | La risorsa è stata spostata in modo permanente |
 | `400` | Bad Request | Il server non riesce ad accettare la richiesta perché i dati sono sbagliati |
+| `403` | Forbidden | Non hai il permesso di accedere al server |
 | `404` | Not Found | La risorsa richiesta non esiste |
 | `500` | Internal Server Error | Errore interno del server |
 

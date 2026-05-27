@@ -33,6 +33,8 @@ function index(request, response) {
         });
     }
 
+    console.log('Prima dell\'invio della risposta da index');
+
     response.json({ error: null, results: menuFiltered });
 }
 
@@ -42,16 +44,7 @@ function show(request, response) {
     // GET http://localhost:3000/pizzas/bufalina     → 404 (pizza non disponibile)
     // GET http://localhost:3000/pizzas/inesistente  → 404 (slug non trovato)
 
-    const slug = request.params.slug.trim();
-
-    const pizzaFound = menu.find(pizza => pizza.slug === slug);
-
-    if (pizzaFound === undefined || !pizzaFound.available) {
-        response.status(404).json({ error: 'Pizza non trovata', results: null });
-        return;
-    }
-
-    const { id, available, createdAt, ...otherProperties } = pizzaFound;
+    const { id, available, createdAt, ...otherProperties } = request.pizzaFound;
     const baseUrl = `${request.protocol}://${request.get('host')}`;
 
     response.json({
@@ -104,16 +97,8 @@ function destroy(request, response) {
     // DELETE http://localhost:3000/pizzas/bufalina     → 404 (già non disponibile)
     // DELETE http://localhost:3000/pizzas/diavola      → 204 (soft delete avvenuto)
 
-    const slug = request.params.slug.trim();
-
-    const pizza = menu.find(p => p.slug === slug);
-
-    if (pizza === undefined || !pizza.available) {
-        response.status(404).json({ error: 'Nessuna pizza trovata', results: null });
-        return;
-    }
-
-    pizza.available = false;
+    const pizzaFound = request.pizzaFound;
+    pizzaFound.available = false;
     response.sendStatus(204);
 }
 

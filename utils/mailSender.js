@@ -10,7 +10,9 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-function sendMail(to, subject, body) {
+function sendMail({to, subject, body}) {
+    console.log('Mail inviata a ' + to);
+    
     return transporter.sendMail({
         from: process.env.SMTP_USERNAME,
         to,
