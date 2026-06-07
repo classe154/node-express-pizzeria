@@ -6,6 +6,7 @@ const pizzaShowFields = [
     'slug', 'name', 'ingredients', 'price', 'spicy'
 ];
 
+// Per il CREATE tutti e quattro i campi sono obbligatori, incluso "spicy" (nessun default).
 const pizzaValidFields = new Set([
     'name', 'price', 'ingredients', 'spicy'
 ]);

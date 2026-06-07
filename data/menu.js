@@ -7,8 +7,8 @@ const menu = [
         price: 9.00,
         available: true,
         spicy: false,
-        createdAt: "2024-01-10",
-        updatedAt: "2024-01-10",
+        createdAt: "2024-01-10T00:00:00.000Z",
+        updatedAt: "2024-01-10T00:00:00.000Z",
     },
     {
         id: 2,
@@ -18,7 +18,8 @@ const menu = [
         price: 9.00,
         available: true,
         spicy: false,
-        createdAt: "2024-01-10",
+        createdAt: "2024-01-10T00:00:00.000Z",
+        updatedAt: "2024-01-10T00:00:00.000Z",
     },
     {
         id: 3,
@@ -28,7 +29,8 @@ const menu = [
         price: 9.50,
         available: true,
         spicy: false,
-        createdAt: "2024-01-10",
+        createdAt: "2024-01-10T00:00:00.000Z",
+        updatedAt: "2024-01-10T00:00:00.000Z",
     },
     {
         id: 5,
@@ -38,7 +40,8 @@ const menu = [
         price: 11.00,
         available: true,
         spicy: true,
-        createdAt: "2024-03-05",
+        createdAt: "2024-03-05T00:00:00.000Z",
+        updatedAt: "2024-03-05T00:00:00.000Z",
     },
     {
         id: 6,
@@ -48,7 +51,8 @@ const menu = [
         price: 13.50,
         available: false,
         spicy: false,
-        createdAt: "2024-03-05",
+        createdAt: "2024-03-05T00:00:00.000Z",
+        updatedAt: "2024-03-05T00:00:00.000Z",
     },
     {
         id: 10,
@@ -58,7 +62,8 @@ const menu = [
         price: 12.00,
         available: true,
         spicy: false,
-        createdAt: "2024-06-20",
+        createdAt: "2024-06-20T00:00:00.000Z",
+        updatedAt: "2024-06-20T00:00:00.000Z",
     }
 ];
 

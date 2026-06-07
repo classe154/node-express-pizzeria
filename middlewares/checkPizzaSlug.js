@@ -5,7 +5,7 @@ function checkPizzaSlug(request, response, next) {
 
     const pizzaFoundIndex = menu.findIndex(p => p.slug === slug);
 
-    if (pizzaFoundIndex === -1 || menu[pizzaFoundIndex].available === false) {
+    if (pizzaFoundIndex === -1) {
         response.status(404)
             .json({
                 error: 'Pizza non trovata',

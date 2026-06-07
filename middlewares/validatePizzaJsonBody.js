@@ -13,7 +13,7 @@ function validatePizzaJsonBody(request, response, next) {
                 errors,
                 results: null
             })
-            return;
+        return;
     }
 
     request.body = data; // Sostituisco il body con i dati

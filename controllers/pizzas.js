@@ -79,8 +79,6 @@ function create(request, response) {
 
     menu.push(pizzaNew);
 
-    console.log(menu);
-
     response.status(201).json({
         error: null,
         results: maskPizzaFields(pizzaNew)
@@ -90,7 +88,7 @@ function create(request, response) {
 function destroy(request, response) {
     // Casi da testare:
     // DELETE http://localhost:3000/pizzas/inesistente  → 404 (slug non trovato)
-    // DELETE http://localhost:3000/pizzas/bufalina     → 404 (già non disponibile)
+    // DELETE http://localhost:3000/pizzas/bufalina     → 204 (soft delete, anche se già non disponibile)
     // DELETE http://localhost:3000/pizzas/diavola      → 204 (soft delete avvenuto)
 
     const pizzaFound = request.pizzaFound;
@@ -99,12 +97,11 @@ function destroy(request, response) {
 }
 
 function modify(request, response) {
-    // Casi da testare (PUT http://localhost:3000/pizzas/:slug con body JSON):
-    // PUT /pizzas/inesistente  → 404 (slug non trovato)
-    // PUT /pizzas/bufalina     → 404 (pizza non disponibile)
-    // PUT /pizzas/diavola + body non valido → 400
+    // Casi da testare (PATCH http://localhost:3000/pizzas/:slug con body JSON):
+    // PATCH /pizzas/inesistente  → 404 (slug non trovato)
+    // PATCH /pizzas/bufalina     → 404 (pizza non disponibile)
+    // PATCH /pizzas/diavola + body non valido → 400
 
-    const slug = request.params.slug;
     const pizzaFoundIndex = request.pizzaFoundIndex;
     const pizzaFound = request.pizzaFound;
     const pizzaUpdatedFields = request.body;
@@ -120,8 +117,6 @@ function modify(request, response) {
     }
 
     menu.splice(pizzaFoundIndex, 1, pizzaUpdated);
-
-    console.log(menu);
 
     response.status(200).json({
         error: null,
