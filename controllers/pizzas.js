@@ -35,7 +35,7 @@ function show(request, response) {
     const connection = getConnection();
 
     connection.execute(`
-            select *
+            select i.id, i.name
             from ingredient_pizza ip
                 join ingredients i on i.id = ip.ingredient_id
             where ip.pizza_id = ?
