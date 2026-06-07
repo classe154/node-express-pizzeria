@@ -50,7 +50,7 @@ Esempio pratico sulle rotte `POST /pizzas` (validazione del body):
 | `{ "name": "Capricciosa", "price": 10 }` | `400` | Ingredients mancante |
 | Body corretto, pizza non trovata | `404` | La risorsa non esiste |
 
-Vedi i casi da testare in [`controllers/pizzas.js` → `create()`](controllers/pizzas.js#L64).
+Vedi i casi da testare in [`controllers/pizzas.js` → `create()`](controllers/pizzas.js#L56).
 
 ---
 
@@ -81,13 +81,59 @@ La pizza continua ad esistere nell'array ma viene **filtrata** in ogni punto del
 | Funzione | Comportamento |
 |----------|--------------|
 | `index()` | filtra le pizze con `available: false` |
-| `showBySlug()` | risponde 404 se `available` è `false` |
-| `update()` | risponde 404 se `available` è `false` |
-| `destroy()` | risponde 404 se già soft-deletata |
+| `show()` | risponde 404 se `available` è `false` (tramite middleware `checkPizzaAvailable`) |
+| `modify()` | non controlla `available`: un admin può modificare anche una pizza non disponibile |
+| `destroy()` | non controlla `available`: imposta `available: false` qualunque sia lo stato corrente |
 
-Vedi l'implementazione in [`controllers/pizzas.js` → `destroy()`](controllers/pizzas.js#L97).
+Vedi l'implementazione in [`controllers/pizzas.js` → `destroy()`](controllers/pizzas.js#L88).
 
 > **Trade-off**: con un database in memoria, le risorse soft-deletate rimangono nell'array per tutta la vita del processo. In un database reale si usa una colonna `deleted_at` (timestamp) che permette anche di sapere *quando* la risorsa è stata eliminata e di ripristinarla se necessario.
+
+---
+
+## Middleware
+
+Un **middleware** è una funzione che viene eseguita tra la ricezione della richiesta e l'invio della risposta. Ogni middleware riceve `(request, response, next)` e può:
+
+- leggere o modificare `request` / `response`
+- terminare la richiesta chiamando `response.json()` o simili
+- passare il controllo al middleware successivo chiamando `next()`
+
+### Catena di middleware per rotta
+
+```
+GET    /pizzas              →  verificaOrarioApertura → index
+GET    /pizzas/:slug        →  verificaOrarioApertura → checkPizzaSlug → checkPizzaAvailable → show
+POST   /pizzas              →  verificaOrarioApertura → validatePizzaJsonBody → create
+PATCH  /pizzas/:slug        →  verificaOrarioApertura → checkPizzaSlug → validatePizzaJsonBody → modify
+DELETE /pizzas/:slug        →  verificaOrarioApertura → checkPizzaSlug → destroy
+```
+
+### `checkPizzaSlug`
+
+[`middlewares/checkPizzaSlug.js`](middlewares/checkPizzaSlug.js) cerca la pizza per slug nell'array `menu`. Se non la trova risponde `404`; altrimenti aggiunge alla request i campi `pizzaFound` e `pizzaFoundIndex` e chiama `next()`.
+
+```js
+request.pizzaFoundIndex = pizzaFoundIndex;
+request.pizzaFound = menu[pizzaFoundIndex];
+```
+
+### `checkPizzaAvailable`
+
+[`middlewares/checkPizzaAvailable.js`](middlewares/checkPizzaAvailable.js) legge `request.pizzaFound` (già popolato da `checkPizzaSlug`) e risponde `404` se la pizza non è disponibile. I due middleware sono separati per permettere alle rotte admin (`PATCH`, `DELETE`) di operare su pizze non disponibili senza passare per questo controllo.
+
+### `validatePizzaJsonBody`
+
+[`middlewares/validatePizzaJsonBody.js`](middlewares/validatePizzaJsonBody.js) delega la validazione a `validatePizza()` in [`utils/pizzas.js`](utils/pizzas.js). Se la validazione fallisce risponde `400` con l'elenco degli errori; altrimenti sostituisce `request.body` con i dati validati e chiama `next()`.
+
+Il middleware capisce automaticamente se la richiesta è un **create** o un **update parziale** leggendo il metodo HTTP:
+
+```js
+const update = request.method === 'PATCH';
+```
+
+- **CREATE** (`POST`): tutti e quattro i campi (`name`, `price`, `ingredients`, `spicy`) sono obbligatori
+- **PATCH**: si possono inviare solo i campi che si vuole modificare (subset dei campi validi)
 
 ---
 
@@ -123,7 +169,30 @@ Imposta lo status code **e** invia il body in un colpo solo. Utile quando non c'
 response.sendStatus(204); // equivale a: res.status(204).send('No Content')
 ```
 
-Vedi l'uso in [`controllers/pizzas.js` → `destroy()`](controllers/pizzas.js#L113).
+Vedi l'uso in [`controllers/pizzas.js` → `destroy()`](controllers/pizzas.js#L88).
+
+---
+
+## Field masking
+
+Il controller non espone mai direttamente l'oggetto pizza dall'array. Prima di inviare la risposta, passa sempre per `maskPizzaFields()`:
+
+```js
+response.json({ error: null, results: maskPizzaFields(pizzaFound) });
+```
+
+Questa funzione restituisce **solo i campi pubblici** della pizza, definiti in `pizzaShowFields`:
+
+```js
+// utils/pizzas.js
+const pizzaShowFields = ['slug', 'name', 'ingredients', 'price', 'spicy'];
+```
+
+I campi interni (`id`, `available`, `createdAt`, `updatedAt`) non arrivano mai al client. Questo è utile per:
+
+- non esporre informazioni implementative (l'`id` interno)
+- non mostrare lo stato `available` (il client non deve sapere se una pizza è stata soft-deletata)
+- controllare in un unico punto quali campi sono pubblici
 
 ---
 
@@ -135,17 +204,15 @@ Sono i valori dinamici definiti nella rotta con `:nomeParametro`:
 
 ```js
 // Rotta definita in routers/pizzas.js
-router.get('/:slug', show);
+router.get('/:slug', checkPizzaSlug, checkPizzaAvailable, show);
 
-// Lettura in controllers/pizzas.js
-const slug = request.params.slug.trim(); // es. GET /pizzas/margherita → slug = "margherita"
+// Lettura in middlewares/checkPizzaSlug.js
+const { slug } = request.params; // es. GET /pizzas/margherita → slug = "margherita"
 ```
 
-Vedi [`routers/pizzas.js`](routers/pizzas.js) e [`controllers/pizzas.js` → `show()`](controllers/pizzas.js#L37).
+Vedi [`middlewares/checkPizzaSlug.js`](middlewares/checkPizzaSlug.js).
 
 > I parametri arrivano sempre come **stringhe**. A differenza degli ID numerici, gli slug non richiedono conversione di tipo.
-
-> **Evoluzione del codice**: nella versione precedente del progetto la rotta usava `/:id` e il controller si chiamava `show()` per ID numerico. Il parametro veniva convertito con `Number(id)` e validato (`isNaN`, `<= 0`). Con il passaggio agli slug tutta la validazione numerica è scomparsa: qualsiasi stringa è uno slug potenzialmente valido, quindi basta un `find()` per verificare se esiste.
 
 ---
 
@@ -180,14 +247,22 @@ I motori di ricerca indicizzano meglio le URL che contengono parole chiave. Inol
 
 #### Come viene generato lo slug
 
-Lo slug viene creato automaticamente a partire dal nome della pizza in [`utils/pizza.js` → `generateSlug()`](utils/pizza.js#L28):
+Lo slug viene creato automaticamente a partire dal nome della pizza in [`utils/pizzas.js` → `generateSlug()`](utils/pizzas.js#L98):
 
-```js
-// "4 Formaggi Speciale" → "4-formaggi-speciale"
-let slug = pizza.name.replaceAll(' ', '-').toLowerCase();
+```
+"4 Formaggi Speciale" → "4-formaggi-speciale"
+"Crêpe & Bufala"      → "crepe-bufala"
 ```
 
-In caso di **collisione** (due pizze con lo stesso nome), viene aggiunto un suffisso numerico incrementale tramite un ciclo `do...while`:
+Il processo in sei passi:
+1. `normalize('NFD')` — separa le lettere dagli accenti
+2. Rimozione dei diacritici (`è` → `e`, `ñ` → `n`)
+3. Tutto minuscolo
+4. Spazi → trattini
+5. Rimozione di tutto ciò che non è lettera, cifra o trattino
+6. Collasso dei trattini doppi (`--` → `-`)
+
+In caso di **collisione** (due pizze con lo stesso nome), viene aggiunto un suffisso numerico incrementale:
 
 ```
 margherita       ← prima pizza con quel nome
@@ -206,7 +281,7 @@ Sono i parametri passati nell'URL dopo il `?`:
 const { priceMax, ingredients } = request.query;
 ```
 
-Vedi [`controllers/pizzas.js` → `index()`](controllers/pizzas.js#L3) per un esempio completo con filtri.
+Vedi [`controllers/pizzas.js` → `index()`](controllers/pizzas.js#L4) per un esempio completo con filtri.
 
 #### Ordinamento dei risultati con `orderBy`
 
@@ -220,8 +295,8 @@ GET /pizzas?orderBy=name    → pizze ordinate per nome (decrescente alfabetico)
 Per evitare che un client passi una chiave arbitraria (es. `orderBy=__proto__`), l'ordinamento è consentito solo su un insieme di campi dichiarati in una **whitelist**:
 
 ```js
-// utils/pizza.js
-export const menuOrderFields = ['price', 'name'];
+// utils/pizzas.js
+const pizzaOrderFields = ['name', 'price'];
 ```
 
 L'ordinamento viene applicato con `Array.sort()`. Il comparatore si comporta in modo diverso a seconda del tipo del valore:
@@ -250,7 +325,7 @@ menuFiltered.sort((pizzaA, pizzaB) => {
 
 ### `request.body` — corpo della richiesta
 
-Contiene i dati inviati dal client nel body (tipicamente nelle richieste `POST` e `PUT`).
+Contiene i dati inviati dal client nel body (tipicamente nelle richieste `POST` e `PATCH`).
 
 Per poterlo leggere è necessario configurare un middleware di parsing in [`server.js`](server.js) (vedi sezione successiva):
 
@@ -275,7 +350,7 @@ Il client invia dati in formato JSON:
 }
 ```
 
-Middleware già attivo in [`server.js` riga 10](server.js#L10):
+Middleware già attivo in [`server.js`](server.js):
 
 ```js
 app.use(express.json());
