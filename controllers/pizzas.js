@@ -81,7 +81,7 @@ function create(request, response) {
 
     response.status(201).json({
         error: null,
-        results: maskPizzaFields(pizzaNew)
+        results: pizzaNew
     });
 }
 
@@ -120,7 +120,7 @@ function modify(request, response) {
 
     response.status(200).json({
         error: null,
-        results: maskPizzaFields(pizzaUpdated)
+        results: pizzaUpdated
     });
 }
 
