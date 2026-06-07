@@ -1,5 +1,6 @@
+import { getConnection } from '../data/db.js';
 import menu from '../data/menu.js';
-import { generateNextId, generateSlug, pizzaOrderFields, validatePizza, maskPizzaFields } from '../utils/pizzas.js';
+import { generateNextId, generateSlug, pizzaOrderFields, validatePizza, maskPizzaFields, pizzaShowFields } from '../utils/pizzas.js';
 
 function index(request, response) {
     // Casi da testare:
@@ -12,31 +13,15 @@ function index(request, response) {
 
     const { ingredients, priceMax, orderBy } = request.query;
 
-    // I parametri di query arrivano sempre come stringhe: parseFloat li converte in numero.
-    // Se priceMax non è presente nell'URL, parseFloat(undefined) restituisce NaN —
-    // il controllo isNaN() serve proprio a rendere il filtro opzionale.
-    const priceMaxReal = parseFloat(priceMax);
+    const connection = getConnection();
 
-    const menuFiltered = menu.filter(pizza => {
-        if (!pizza.available) return false;
-        if (!isNaN(priceMaxReal) && pizza.price > priceMaxReal) return false;
-        if (ingredients !== undefined && !pizza.ingredients.some(i => i.includes(ingredients))) return false;
-        return true;
-    });
-
-    if (pizzaOrderFields.includes(orderBy)) {
-        menuFiltered.sort((pizzaA, pizzaB) => {
-            const a = pizzaA[orderBy];
-            const b = pizzaB[orderBy];
-            if (typeof a === 'string') return b.localeCompare(a);
-            if (typeof a === 'number') return b - a;
+    connection.query(`select slug, name, price, spicy from pizzas;`)
+        .then(([rows]) => {
+            response.json({
+                error: null,
+                results: rows
+            });
         });
-    }
-
-    response.json({
-        error: null,
-        results: menuFiltered.map(maskPizzaFields),
-    });
 }
 
 function show(request, response) {
@@ -47,10 +32,24 @@ function show(request, response) {
 
     const pizzaFound = request.pizzaFound;
 
-    response.json({
-        error: null,
-        results: maskPizzaFields(pizzaFound)
-    });
+    const connection = getConnection();
+
+    connection.execute(`
+            select *
+            from ingredient_pizza ip
+                join ingredients i on i.id = ip.ingredient_id
+            where ip.pizza_id = ?
+        `, [pizzaFound.id])
+        .then(([rows]) => {
+
+            const ingredients = rows.map(r => r.name);
+            pizzaFound.ingredients = ingredients;
+
+            response.json({
+                error: null,
+                results: pizzaFound
+            });
+        });
 }
 
 function create(request, response) {
@@ -93,17 +92,21 @@ function destroy(request, response) {
 
     const pizzaFound = request.pizzaFound;
 
-    if (pizzaFound.available === false) {
+    if (pizzaFound.deletedAt !== null) {
         response.status(400).json({
-            error: 'La pizza è già non disponibile',
+            error: 'La pizza è già stata eliminata',
             results: null
         });
         return;
     }
+    const connection = getConnection();
 
-    pizzaFound.available = false;
-    pizzaFound.updatedAt = new Date().toISOString();
-    response.sendStatus(204);
+    connection.execute(
+        `update pizzas set deletedAt = ? where slug = ?`,
+        [new Date().toISOString(), pizzaFound.slug]
+    ).then(() => {
+        response.sendStatus(204);
+    });
 }
 
 function restore(request, response) {
@@ -114,17 +117,22 @@ function restore(request, response) {
 
     const pizzaFound = request.pizzaFound;
 
-    if (pizzaFound.available) {
+    if (pizzaFound.deletedAt === null) {
         response.status(400).json({
-            error: 'La pizza è già disponibile',
+            error: 'La pizza è già ripristinata',
             results: null
         });
         return;
     }
 
-    pizzaFound.available = true;
-    pizzaFound.updatedAt = new Date().toISOString();
-    response.sendStatus(204);
+    const connection = getConnection();
+
+    connection.execute(
+        `update pizzas set deletedAt = null where slug = ?`,
+        [pizzaFound.slug]
+    ).then(() => {
+        response.sendStatus(204);
+    });
 }
 
 function modify(request, response) {
@@ -141,7 +149,7 @@ function modify(request, response) {
         ...pizzaFound,
         ...pizzaUpdatedFields,
         updatedAt: new Date().toISOString()
-    };    
+    };
 
     if (pizzaFound.name !== pizzaUpdated.name) {
         pizzaUpdated.slug = generateSlug(pizzaUpdated);

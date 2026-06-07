@@ -15,7 +15,8 @@ initDb()
             add column price decimal(10,2) not null default 10.00,
             add column spicy tinyint not null default 0,
             add column createdAt datetime not null default now(),
-            add column updatedAt datetime not null default now();
+            add column updatedAt datetime not null default now(),
+            add column deletedAt datetime default null;
         `);
 
     }).then(() => {

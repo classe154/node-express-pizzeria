@@ -1,7 +1,7 @@
 function checkPizzaAvailable(request, response, next) {
     const pizza = request.pizzaFound;
 
-    if (!pizza.available) {
+    if (pizza.deletedAt !== null) {
         response.status(404)
             .json({
                 error: 'Pizza non disponibile',

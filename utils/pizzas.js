@@ -141,6 +141,7 @@ function generateNextId() {
 
 export {
     pizzaOrderFields,
+    pizzaShowFields,
     maskPizzaFields,
     validatePizza,
     generateSlug,
