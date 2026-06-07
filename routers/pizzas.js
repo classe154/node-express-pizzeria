@@ -1,6 +1,6 @@
 import express from 'express';
 import { index, show, create, modify, destroy, restore } from '../controllers/pizzas.js';
-import verificaOrarioApertura from '../middlewares/verificaOrarioApertura.js';
+import checkOpenTime from '../middlewares/checkOpenTime.js';
 import checkPizzaSlug from '../middlewares/checkPizzaSlug.js';
 import checkPizzaAvailable from '../middlewares/checkPizzaAvailable.js';
 import validatePizzaJsonBody from '../middlewares/validatePizzaJsonBody.js';
@@ -8,7 +8,7 @@ import validatePizzaJsonBody from '../middlewares/validatePizzaJsonBody.js';
 // /pizzas
 const router = express.Router();
 
-router.use(verificaOrarioApertura);
+router.use(checkOpenTime);
 
 // INDEX
 router.get('/', index);

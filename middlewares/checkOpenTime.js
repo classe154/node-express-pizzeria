@@ -1,4 +1,4 @@
-function verificaOrarioApertura(request, response, next) {
+function checkOpenTime(request, response, next) {
     const ora = new Date().getHours();
 
     if (ora < 9 || ora > 22) {
@@ -12,4 +12,4 @@ function verificaOrarioApertura(request, response, next) {
     }
 }
 
-export default verificaOrarioApertura;
+export default checkOpenTime;
