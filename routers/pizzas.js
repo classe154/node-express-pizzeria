@@ -1,5 +1,5 @@
 import express from 'express';
-import { index, show, create, modify, destroy } from '../controllers/pizzas.js';
+import { index, show, create, modify, destroy, restore } from '../controllers/pizzas.js';
 import verificaOrarioApertura from '../middlewares/verificaOrarioApertura.js';
 import checkPizzaSlug from '../middlewares/checkPizzaSlug.js';
 import checkPizzaAvailable from '../middlewares/checkPizzaAvailable.js';
@@ -13,9 +13,7 @@ router.use(verificaOrarioApertura);
 // INDEX
 router.get('/', index);
 
-// SHOW by slug
-// http://localhost:3000/pizzas/4-formaggi
-// http://localhost:3000/pizzas/diavola
+// SHOW
 router.get('/:slug', checkPizzaSlug, checkPizzaAvailable, show);
 
 // CREATE
@@ -26,5 +24,8 @@ router.patch('/:slug', checkPizzaSlug, validatePizzaJsonBody, modify);
 
 // DELETE
 router.delete('/:slug', checkPizzaSlug, destroy);
+
+// RESTORE
+router.post('/:slug/restore', checkPizzaSlug, restore);
 
 export default router;

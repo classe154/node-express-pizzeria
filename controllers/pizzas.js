@@ -92,7 +92,38 @@ function destroy(request, response) {
     // DELETE http://localhost:3000/pizzas/diavola      → 204 (soft delete avvenuto)
 
     const pizzaFound = request.pizzaFound;
+
+    if (pizzaFound.available === false) {
+        response.status(400).json({
+            error: 'La pizza è già non disponibile',
+            results: null
+        });
+        return;
+    }
+
     pizzaFound.available = false;
+    pizzaFound.updatedAt = new Date().toISOString();
+    response.sendStatus(204);
+}
+
+function restore(request, response) {
+    // Casi da testare:
+    // POST http://localhost:3000/pizzas/inesistente/restore  → 404 (slug non trovato)
+    // POST http://localhost:3000/pizzas/diavola/restore      → 400 (pizza già disponibile)
+    // POST http://localhost:3000/pizzas/bufalina/restore     → 200 (ripristinata)
+
+    const pizzaFound = request.pizzaFound;
+
+    if (pizzaFound.available) {
+        response.status(400).json({
+            error: 'La pizza è già disponibile',
+            results: null
+        });
+        return;
+    }
+
+    pizzaFound.available = true;
+    pizzaFound.updatedAt = new Date().toISOString();
     response.sendStatus(204);
 }
 
@@ -124,4 +155,4 @@ function modify(request, response) {
     });
 }
 
-export { index, show, create, modify, destroy };
+export { index, show, create, modify, destroy, restore };
