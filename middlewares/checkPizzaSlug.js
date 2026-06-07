@@ -3,11 +3,9 @@ import menu from "../data/menu.js";
 function checkPizzaSlug(request, response, next) {
     const { slug } = request.params;
 
-    const pizzaFound = menu.find(pizza => {
-        return pizza.slug === slug;
-    });
+    const pizzaFoundIndex = menu.findIndex(p => p.slug === slug);
 
-    if (pizzaFound === undefined) {
+    if (pizzaFoundIndex === -1 || menu[pizzaFoundIndex].available === false) {
         response.status(404)
             .json({
                 error: 'Pizza non trovata',
@@ -16,7 +14,8 @@ function checkPizzaSlug(request, response, next) {
         return;
     }
 
-    request.pizzaFound = pizzaFound;
+    request.pizzaFoundIndex = pizzaFoundIndex;
+    request.pizzaFound = menu[pizzaFoundIndex];
     next();
 }
 

@@ -1,7 +1,8 @@
 import express, { response } from 'express';
-import { index, show, create, update, destroy } from '../controllers/pizzas.js';
+import { index, show, create, modify, destroy } from '../controllers/pizzas.js';
 import verificaOrarioApertura from '../middlewares/verificaOrarioApertura.js';
 import checkPizzaSlug from '../middlewares/checkPizzaSlug.js';
+import validatePizzaJsonBody from '../middlewares/validatePizzaJsonBody.js';
 
 // /pizzas
 const router = express.Router();
@@ -17,10 +18,10 @@ router.get('/', index);
 router.get('/:slug', checkPizzaSlug, show);
 
 // CREATE
-router.post('/', create);
+router.post('/', validatePizzaJsonBody, create);
 
-// UPDATE
-router.put('/:slug', checkPizzaSlug, update);
+// MODIFY
+router.patch('/:slug', checkPizzaSlug, validatePizzaJsonBody, modify);
 
 // DELETE
 router.delete('/:slug', checkPizzaSlug, destroy);

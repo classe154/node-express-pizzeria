@@ -2,7 +2,7 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { response } from "express";
 import { createAgent, HumanMessage, tool } from "langchain";
 import { z } from 'zod';
-import { sendMail } from "./utils/mailSender.js";
+import { sendMail } from "./utils/mail.js";
 
 function meteo({ luogo }) {
     console.log(`Meteo per ${luogo} chiamato`);

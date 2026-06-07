@@ -1,5 +1,5 @@
 import menu from '../data/menu.js';
-import { generateNextId, generateSlug, menuOrderFields, validatePizzaBody } from '../utils/pizza.js';
+import { generateNextId, generateSlug, pizzaOrderFields, validatePizza, maskPizzaFields } from '../utils/pizzas.js';
 
 function index(request, response) {
     // Casi da testare:
@@ -24,7 +24,7 @@ function index(request, response) {
         return true;
     });
 
-    if (menuOrderFields.includes(orderBy)) {
+    if (pizzaOrderFields.includes(orderBy)) {
         menuFiltered.sort((pizzaA, pizzaB) => {
             const a = pizzaA[orderBy];
             const b = pizzaB[orderBy];
@@ -33,9 +33,10 @@ function index(request, response) {
         });
     }
 
-    console.log('Prima dell\'invio della risposta da index');
-
-    response.json({ error: null, results: menuFiltered });
+    response.json({
+        error: null,
+        results: menuFiltered.map(maskPizzaFields),
+    });
 }
 
 function show(request, response) {
@@ -44,15 +45,11 @@ function show(request, response) {
     // GET http://localhost:3000/pizzas/bufalina     → 404 (pizza non disponibile)
     // GET http://localhost:3000/pizzas/inesistente  → 404 (slug non trovato)
 
-    const { id, available, createdAt, ...otherProperties } = request.pizzaFound;
-    const baseUrl = `${request.protocol}://${request.get('host')}`;
+    const pizzaFound = request.pizzaFound;
 
     response.json({
         error: null,
-        results: {
-            ...otherProperties,
-            image: `${baseUrl}/${otherProperties.image}`
-        }
+        results: maskPizzaFields(pizzaFound)
     });
 }
 
@@ -66,29 +63,28 @@ function create(request, response) {
     // { "name": "Capricciosa", "price": 10.50, "ingredients": [] }    → 400 (ingredients vuoto)
     // { "name": "Capricciosa", "price": 10.50, "ingredients": ["mozzarella"] } → 201
 
-    const validation = validatePizzaBody(request.body);
-    if (validation.error) {
-        response.status(400).json({ error: validation.error, results: null });
-        return;
-    }
-
-    const { name, price, ingredients, spicy } = validation.data;
+    const { name, price, ingredients, spicy } = request.body;
 
     const pizzaNew = {
         id: generateNextId(),
-        slug: null,
         name,
-        image: null,
         ingredients,
-        available: true,
         price,
-        spicy
+        spicy,
+        available: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
     };
     pizzaNew.slug = generateSlug(pizzaNew);
 
     menu.push(pizzaNew);
 
-    response.status(201).json({ error: null, results: pizzaNew });
+    console.log(menu);
+
+    response.status(201).json({
+        error: null,
+        results: maskPizzaFields(pizzaNew)
+    });
 }
 
 function destroy(request, response) {
@@ -102,38 +98,35 @@ function destroy(request, response) {
     response.sendStatus(204);
 }
 
-function update(request, response) {
+function modify(request, response) {
     // Casi da testare (PUT http://localhost:3000/pizzas/:slug con body JSON):
     // PUT /pizzas/inesistente  → 404 (slug non trovato)
     // PUT /pizzas/bufalina     → 404 (pizza non disponibile)
     // PUT /pizzas/diavola + body non valido → 400
 
-    const slug = request.params.slug.trim();
+    const slug = request.params.slug;
+    const pizzaFoundIndex = request.pizzaFoundIndex;
+    const pizzaFound = request.pizzaFound;
+    const pizzaUpdatedFields = request.body;
 
-    const pizzaFoundIndex = menu.findIndex(p => p.slug === slug);
+    const pizzaUpdated = {
+        ...pizzaFound,
+        ...pizzaUpdatedFields,
+        updatedAt: new Date().toISOString()
+    };    
 
-    if (pizzaFoundIndex === -1 || !menu[pizzaFoundIndex].available) {
-        response.status(404).json({ error: 'Nessuna pizza trovata', results: null });
-        return;
-    }
-
-    const validation = validatePizzaBody(request.body);
-    if (validation.error) {
-        response.status(400).json({ error: validation.error, results: null });
-        return;
-    }
-
-    const { name, price, ingredients, spicy } = validation.data;
-    const pizzaOld = menu[pizzaFoundIndex];
-    const pizzaUpdated = { ...pizzaOld, name, ingredients, price, spicy };
-
-    if (name !== pizzaOld.name) {
+    if (pizzaFound.name !== pizzaUpdated.name) {
         pizzaUpdated.slug = generateSlug(pizzaUpdated);
     }
 
     menu.splice(pizzaFoundIndex, 1, pizzaUpdated);
 
-    response.status(200).json({ error: null, results: pizzaUpdated });
+    console.log(menu);
+
+    response.status(200).json({
+        error: null,
+        results: maskPizzaFields(pizzaUpdated)
+    });
 }
 
-export { index, show, create, update, destroy };
+export { index, show, create, modify, destroy };
