@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "node --env-file=.env test.js",
+    "test": "node --env-file=.env promise.js",
     "start": "node --env-file=.env server.js",
     "watch": "node --watch --env-file=.env server.js"
   },
@@ -23,6 +23,7 @@
     "@langchain/anthropic": "^1.4.0",
     "express": "^5.2.1",
     "langchain": "^1.4.2",
+    "mysql2": "^3.22.5",
     "nodemailer": "^8.0.7",
     "zod": "^4.4.3"
   }

@@ -14,18 +14,15 @@ router.use(checkOpenTime);
 router.get('/', index);
 
 // SHOW
-router.get('/:slug', checkPizzaSlug, checkPizzaAvailable, show);
+router.get('/:id', show);
 
 // CREATE
-router.post('/', validatePizzaJsonBody, create);
+router.post('/', create);
 
 // MODIFY
-router.patch('/:slug', checkPizzaSlug, validatePizzaJsonBody, modify);
+router.patch('/:slug', modify);
 
 // DELETE
-router.delete('/:slug', checkPizzaSlug, destroy);
-
-// RESTORE
-router.post('/:slug/restore', checkPizzaSlug, restore);
+router.delete('/:slug', destroy);
 
 export default router;
