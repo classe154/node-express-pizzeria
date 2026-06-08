@@ -1,6 +1,5 @@
 import { getConnection } from '../data/db.js';
-import menu from '../data/menu.js';
-import { generateNextId, generateSlug, pizzaOrderFields, validatePizza, maskPizzaFields, pizzaShowFields } from '../utils/pizzas.js';
+import { generateSlug } from '../utils/pizzas.js';
 
 function index(request, response) {
     // Casi da testare:
@@ -65,22 +64,42 @@ function create(request, response) {
     const { name, price, ingredients, spicy } = request.body;
 
     const pizzaNew = {
-        id: generateNextId(),
         name,
-        ingredients,
         price,
+        ingredients,
         spicy,
-        available: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: new Date().toISOString().replace('T', ' ').split('Z')[0],
+        updatedAt: new Date().toISOString().replace('T', ' ').split('Z')[0]
     };
-    pizzaNew.slug = generateSlug(pizzaNew);
 
-    menu.push(pizzaNew);
+    generateSlug(pizzaNew).then(slug => {
+        const connection = getConnection();
 
-    response.status(201).json({
-        error: null,
-        results: pizzaNew
+        pizzaNew.slug = slug;
+
+        connection.execute(
+            `insert into pizzas (name, slug, price, spicy, createdAt, updatedAt)
+                values (?, ?, ?, ?, ?, ?)`,
+            [
+                pizzaNew.name,
+                pizzaNew.slug,
+                pizzaNew.price,
+                pizzaNew.spicy,
+                pizzaNew.createdAt,
+                pizzaNew.updatedAt
+            ]
+        ).then(() => {
+            response.status(201).json({
+                error: null,
+                results: pizzaNew
+            });
+        }).catch(error => {
+            console.error(error);
+            response.status(500).json({
+                error: 'Errore del server',
+                results: null
+            });
+        });
     });
 }
 
@@ -103,9 +122,18 @@ function destroy(request, response) {
 
     connection.execute(
         `update pizzas set deletedAt = ? where slug = ?`,
-        [new Date().toISOString(), pizzaFound.slug]
+        [
+            new Date().toISOString().replace('T', ' ').split('Z')[0],
+            pizzaFound.slug
+        ]
     ).then(() => {
         response.sendStatus(204);
+    }).catch(error => {
+        console.error(error);
+        response.status(500).json({
+            error: 'Errore del server',
+            results: null
+        });
     });
 }
 
@@ -132,6 +160,12 @@ function restore(request, response) {
         [pizzaFound.slug]
     ).then(() => {
         response.sendStatus(204);
+    }).catch(error => {
+        console.error(error);
+        response.status(500).json({
+            error: 'Errore del server',
+            results: null
+        });
     });
 }
 
@@ -141,25 +175,46 @@ function modify(request, response) {
     // PATCH /pizzas/bufalina     → 404 (pizza non disponibile)
     // PATCH /pizzas/diavola + body non valido → 400
 
-    const pizzaFoundIndex = request.pizzaFoundIndex;
     const pizzaFound = request.pizzaFound;
     const pizzaUpdatedFields = request.body;
 
     const pizzaUpdated = {
         ...pizzaFound,
         ...pizzaUpdatedFields,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString().replace('T', ' ').split('Z')[0]
     };
 
-    if (pizzaFound.name !== pizzaUpdated.name) {
-        pizzaUpdated.slug = generateSlug(pizzaUpdated);
-    }
+    const slugPromise = pizzaFound.name !== pizzaUpdated.name
+        ? generateSlug(pizzaUpdated)
+        : Promise.resolve(pizzaUpdated.slug);
 
-    menu.splice(pizzaFoundIndex, 1, pizzaUpdated);
+    slugPromise.then(slug => {
+        pizzaUpdated.slug = slug;
 
-    response.status(200).json({
-        error: null,
-        results: pizzaUpdated
+        const connection = getConnection();
+
+        connection.execute(
+            `update pizzas set name = ?, slug = ?, price = ?, spicy = ?, updatedAt = ? where id = ?`,
+            [
+                pizzaUpdated.name,
+                pizzaUpdated.slug,
+                pizzaUpdated.price,
+                pizzaUpdated.spicy,
+                pizzaUpdated.updatedAt,
+                pizzaUpdated.id
+            ]
+        ).then(() => {
+            response.status(200).json({
+                error: null,
+                results: pizzaUpdated
+            });
+        }).catch(error => {
+            console.error(error);
+            response.status(500).json({
+                error: 'Errore del server',
+                results: null
+            });
+        });
     });
 }
 

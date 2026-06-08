@@ -1,4 +1,4 @@
-import menu from '../data/menu.js';
+import { getConnection } from '../data/db.js';
 
 const pizzaOrderFields = ['name', 'price'];
 
@@ -95,6 +95,17 @@ function maskPizzaFields(pizza) {
     }, {});
 }
 
+function getPizzaBySlug(slug) {
+    const connection = getConnection();
+    return connection.query('SELECT * FROM pizzas WHERE slug = ?', [slug])
+        .then(([rows]) => {
+            if (rows.length === 0) {
+                return null;
+            }
+            return rows[0];
+        });
+}
+
 function generateSlug(pizza) {
     // Passo 1: normalize('NFD') decompone i caratteri accentati in due parti separate:
     //   la lettera base + il segno diacritico (accento, cediglia, ecc.)
@@ -123,20 +134,23 @@ function generateSlug(pizza) {
     //   Esempio: "calzone--bufala" → "calzone-bufala"
     base = base.replace(/-+/g, '-');
 
-    // Nel caso peggiore tutte le pizze hanno lo stesso slug base:
-    // menu.length tentativi sono sempre sufficienti a trovarne uno libero.
-    for (let increment = 0; increment <= menu.length; increment++) {
+    const connection = getConnection();
+
+    function checkCandidate(increment) {
         const candidate = increment === 0 ? base : `${base}-${increment}`;
 
-        if (!menu.some(p => p.slug === candidate)) {
-            return candidate;
-        }
+        return connection.query(
+            'SELECT 1 FROM pizzas WHERE slug = ? LIMIT 1',
+            [candidate]
+        ).then(([rows]) => {
+            if (rows.length === 0) {
+                return candidate;
+            }
+            return checkCandidate(increment + 1);
+        });
     }
-}
 
-function generateNextId() {
-    // Math.max garantisce l'id più alto anche se il menu non è ordinato per id
-    return Math.max(...menu.map(p => p.id)) + 1;
+    return checkCandidate(0);
 }
 
 export {
@@ -145,5 +159,5 @@ export {
     maskPizzaFields,
     validatePizza,
     generateSlug,
-    generateNextId
+    getPizzaBySlug
 }

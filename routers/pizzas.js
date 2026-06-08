@@ -20,7 +20,7 @@ router.get('/:slug', checkPizzaSlug, checkPizzaAvailable, show);
 router.post('/', validatePizzaJsonBody, create);
 
 // MODIFY
-router.patch('/:slug', checkPizzaSlug, validatePizzaJsonBody, modify);
+router.patch('/:slug', checkPizzaSlug, checkPizzaAvailable, validatePizzaJsonBody, modify);
 
 // DELETE
 router.delete('/:slug', checkPizzaSlug, destroy);

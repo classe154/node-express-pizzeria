@@ -24,11 +24,12 @@ initDb()
         return connection.query(`select * from pizzas;`).then(([rows]) => {
             return rows.reduce((promiseChain, row) => {
                 return promiseChain.then(() => {
-                    const slug = generateSlug(row);
-                    return connection.execute(
-                        `update pizzas set slug = ? where id = ?`,
-                        [slug, row.id]
-                    );
+                    return generateSlug(row).then(slug => {
+                        return connection.execute(
+                            `update pizzas set slug = ? where id = ?`,
+                            [slug, row.id]
+                        );
+                    });
                 });
             }, Promise.resolve());
         });
