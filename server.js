@@ -15,6 +15,8 @@ app.use('/pizzas' , pizzasRouter);
 app.use(errorHandler);
 app.use(notFound);
 
+app.set('trust proxy', true);
+
 app.listen(port, (error) => {
     if (error) {
         console.error(error);
