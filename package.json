@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --env-file=.env promise.js",
     "start": "node --env-file=.env server.js",
-    "watch": "node --watch --env-file=.env server.js"
+    "watch": "node --watch --env-file=.env server.js",
+    "sequelize": "node --env-file=.env sequelize.js"
   },
   "keywords": [],
   "author": "Alan Turing",
@@ -26,6 +27,7 @@
     "langchain": "^1.4.2",
     "mysql2": "^3.22.5",
     "nodemailer": "^8.0.7",
+    "sequelize": "^6.37.8",
     "zod": "^4.4.3"
   }
 }
